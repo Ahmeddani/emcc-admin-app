@@ -244,7 +244,7 @@ public class BoardSummaryTab {
 
             ReportExporter.exportPdf(root.getScene().getWindow(),
                     "EMCC_Board_Summary_" + tag + ".pdf", pdf -> {
-                        pdf.orgHeader("Eritrean Muslims Council of Columbus (EMCC)");
+                        pdf.orgHeader("Eritrean Muslims Community of Columbus (EMCC)");
                         pdf.title("Annual Financial Summary — " + PeriodScope.periodLabel(period, year, mIdx, qIdx));
                         pdf.generatedOn();
                         pdf.spacer(6);
@@ -283,7 +283,7 @@ public class BoardSummaryTab {
     private static String buildCsv(String period, int year, int mIdx, int qIdx, String collected, String rate,
                                     String outstanding, String current, List<Integer> scope, double[] monthlyTotals) {
         CsvWriter csv = new CsvWriter();
-        csv.raw("Eritrean Muslims Council of Columbus (EMCC)");
+        csv.raw("Eritrean Muslims Community of Columbus (EMCC)");
         csv.raw("Annual Financial Summary — " + PeriodScope.periodLabel(period, year, mIdx, qIdx));
         csv.line("Generated", LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")));
         csv.blank();

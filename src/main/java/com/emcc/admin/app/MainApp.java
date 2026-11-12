@@ -7,9 +7,10 @@ import com.emcc.admin.app.pages.LoginPage;
 import com.emcc.admin.app.pages.MembersPage;
 import com.emcc.admin.app.pages.PaymentsPage;
 import com.emcc.admin.app.pages.ReportsPage;
+import com.emcc.admin.app.service.BackendLauncher;
 import javafx.animation.FadeTransition;
-import javafx.animation.PauseTransition;
 import javafx.application.Application;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -35,20 +36,57 @@ public class MainApp extends Application {
     private Label detailTitleLabel;
     private Label detailTextLabel;
     private VBox detailContent;
+    private final BackendLauncher backendLauncher = new BackendLauncher();
 
     @Override
     public void start(Stage stage) {
         primaryStage = stage;
-        Scene splashScene = new Scene(createSplashPane(), 520, 420);
+
+        Label statusLabel = new Label("Starting…");
+        statusLabel.getStyleClass().add("detail-message");
+        VBox splashRoot = new VBox(16, createSplashPane(), statusLabel);
+        splashRoot.setAlignment(Pos.CENTER);
+        splashRoot.getStyleClass().add("splash-pane");
+
+        Scene splashScene = new Scene(splashRoot, 520, 420);
         splashScene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
 
         stage.setTitle("EMCC Admin App");
         stage.setScene(splashScene);
+        stage.setOnCloseRequest(e -> backendLauncher.stop());
         stage.show();
 
-        PauseTransition splashDelay = new PauseTransition(Duration.seconds(1.8));
-        splashDelay.setOnFinished(event -> showLoginScene(stage));
-        splashDelay.play();
+        Task<Boolean> startup = new Task<>() {
+            @Override protected Boolean call() {
+                updateMessage("Starting backend…");
+                try {
+                    backendLauncher.start();
+                } catch (Exception ex) {
+                    updateMessage("Failed to start backend: " + ex.getMessage());
+                    return false;
+                }
+                updateMessage("Waiting for backend to be ready…");
+                return backendLauncher.awaitReady(30);
+            }
+        };
+        statusLabel.textProperty().bind(startup.messageProperty());
+        startup.setOnSucceeded(e -> {
+            statusLabel.textProperty().unbind();
+            if (Boolean.TRUE.equals(startup.getValue())) {
+                showLoginScene(stage);
+            } else {
+                statusLabel.setText("Backend did not start in time. Check backend.log next to the app, then restart.");
+            }
+        });
+        startup.setOnFailed(e -> {
+            statusLabel.textProperty().unbind();
+            Throwable ex = startup.getException();
+            statusLabel.setText("Startup error: " + (ex != null ? ex.getMessage() : "unknown"));
+        });
+
+        Thread startupThread = new Thread(startup, "backend-startup");
+        startupThread.setDaemon(true);
+        startupThread.start();
     }
 
     private void showLoginScene(Stage stage) {
@@ -114,9 +152,7 @@ public class MainApp extends Application {
 
     private StackPane createSplashPane() {
         Node splashLogo = DashboardPage.createLogo();
-        StackPane splashPane = new StackPane(splashLogo);
-        splashPane.getStyleClass().add("splash-pane");
-        return splashPane;
+        return new StackPane(splashLogo);
     }
 
     private VBox createSidebar() {
