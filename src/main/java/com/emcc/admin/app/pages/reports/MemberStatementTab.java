@@ -236,7 +236,7 @@ public class MemberStatementTab {
             if (m == null) return;
             ReportExporter.exportPdf(root.getScene().getWindow(),
                     "EMCC_Statement_" + safeFileName(m.getName()) + ".pdf", pdf -> {
-                        pdf.orgHeader("Eritrean Muslims Council of Columbus (EMCC)");
+                        pdf.orgHeader("Eritrean Muslims Community of Columbus (EMCC)");
                         pdf.title("Member Payment Statement");
                         pdf.generatedOn();
                         pdf.spacer(6);
@@ -268,7 +268,7 @@ public class MemberStatementTab {
 
     private static String buildCsv(Member m, List<Payment> history, String totalPaid, String standing) {
         CsvWriter csv = new CsvWriter();
-        csv.raw("Eritrean Muslims Council of Columbus (EMCC)");
+        csv.raw("Eritrean Muslims Community of Columbus (EMCC)");
         csv.raw("Member Payment Statement");
         csv.line("Generated", LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")));
         csv.blank();

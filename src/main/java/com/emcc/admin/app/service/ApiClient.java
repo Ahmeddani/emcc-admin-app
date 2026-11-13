@@ -29,6 +29,12 @@ public class ApiClient {
 
     private static String authToken;
     private static String adminName;
+    private static boolean mustChangePassword;
+
+    /** True after login when the admin is still using an assigned password. */
+    public static boolean mustChangePassword() {
+        return mustChangePassword;
+    }
 
     public static String getAdminName() {
         return adminName;
@@ -36,26 +42,101 @@ public class ApiClient {
 
     // ── Auth ──────────────────────────────────────────────────────────────────
 
-    public static void login(String email, String password) throws Exception {
+    /** Result of the password step: either signed in, or a code was emailed and must be verified. */
+    public record LoginChallenge(String challengeId, String sentTo) {}
+
+    /**
+     * Step 1: checks email + password. Returns null if signed in directly (MFA disabled on
+     * the server), or a challenge when a sign-in code has been emailed.
+     */
+    public static LoginChallenge login(String email, String password) throws Exception {
         ObjectNode body = MAPPER.createObjectNode();
         body.put("email", email);
         body.put("password", password);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/auth/login"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
-                .build();
-
-        HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = postAuth("/auth/login", body);
         if (response.statusCode() == 200) {
             JsonNode json = MAPPER.readTree(response.body());
-            authToken = json.get("token").asText();
-            adminName = json.path("adminName").asText("Admin");
+            if (json.path("mfaRequired").asBoolean(false)) {
+                return new LoginChallenge(json.get("challengeId").asText(), json.path("sentTo").asText(""));
+            }
+            storeSession(json);
+            return null;
         } else if (response.statusCode() == 401) {
             throw new IllegalArgumentException("Invalid email or password.");
         } else {
-            throw new RuntimeException("Login failed with status " + response.statusCode());
+            throw new IllegalArgumentException(errorMessage(response,
+                    "Login failed with status " + response.statusCode()));
+        }
+    }
+
+    /** Step 2: verifies the emailed code and stores the session token. */
+    public static void verifyLoginCode(String challengeId, String code) throws Exception {
+        ObjectNode body = MAPPER.createObjectNode();
+        body.put("challengeId", challengeId);
+        body.put("code", code);
+
+        HttpResponse<String> response = postAuth("/auth/verify", body);
+        if (response.statusCode() == 200) {
+            storeSession(MAPPER.readTree(response.body()));
+        } else if (response.statusCode() == 410) {
+            throw new IllegalStateException(errorMessage(response, "Code expired. Sign in again."));
+        } else {
+            throw new IllegalArgumentException(errorMessage(response, "Incorrect code."));
+        }
+    }
+
+    /** Emails a new code for the same challenge (server enforces a 30 s cooldown). */
+    public static void resendLoginCode(String challengeId) throws Exception {
+        ObjectNode body = MAPPER.createObjectNode();
+        body.put("challengeId", challengeId);
+        HttpResponse<String> response = postAuth("/auth/resend", body);
+        if (response.statusCode() != 200) {
+            throw new IllegalArgumentException(errorMessage(response, "Could not resend the code."));
+        }
+    }
+
+    private static HttpResponse<String> postAuth(String path, ObjectNode body) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + path))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(30))
+                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
+                .build();
+        return HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    private static void storeSession(JsonNode json) {
+        authToken = json.get("token").asText();
+        adminName = json.path("adminName").asText("Admin");
+        mustChangePassword = json.path("mustChangePassword").asBoolean(false);
+    }
+
+    /** Replaces the signed-in admin's password. Throws IllegalArgumentException with the server's reason. */
+    public static void changePassword(String currentPassword, String newPassword) throws Exception {
+        ObjectNode body = MAPPER.createObjectNode();
+        body.put("currentPassword", currentPassword);
+        body.put("newPassword", newPassword);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/auth/change-password"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + authToken)
+                .timeout(Duration.ofSeconds(30))
+                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
+                .build();
+        HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalArgumentException(errorMessage(response, "Could not change the password."));
+        }
+        mustChangePassword = false;
+    }
+
+    private static String errorMessage(HttpResponse<String> response, String fallback) {
+        try {
+            String msg = MAPPER.readTree(response.body()).path("error").asText("");
+            return msg.isBlank() ? fallback : msg;
+        } catch (Exception e) {
+            return fallback;
         }
     }
 

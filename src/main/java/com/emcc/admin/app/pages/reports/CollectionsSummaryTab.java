@@ -313,7 +313,7 @@ public class CollectionsSummaryTab {
     private static VBox monthCol(String month, double amount, int paid, int total,
                                   boolean isFuture, boolean inScope) {
         Label mLbl = new Label(month);
-        mLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: 700; -fx-text-fill: #9aa0b2;");
+        mLbl.setStyle("-fx-font-size: 11px; -fx-font-weight: 700; -fx-text-fill: black;");
 
         String amtText = isFuture ? "—" : amount > 0 ? String.format("$%.0f", amount) : "$0";
         Label amtLbl = new Label(amtText);
@@ -476,7 +476,7 @@ public class CollectionsSummaryTab {
         String pLabel = periodLabel(period, year, mIdx, qIdx);
 
         CsvWriter csv = new CsvWriter();
-        csv.raw("Eritrean Muslims Council of Columbus (EMCC)");
+        csv.raw("Eritrean Muslims Community of Columbus (EMCC)");
         csv.raw("Financial Report — " + pLabel);
         csv.line("Generated", LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")));
         csv.blank();
@@ -545,7 +545,7 @@ public class CollectionsSummaryTab {
         long paid = total - nonPayers.size();
         double rate = total == 0 ? 0 : paid * 100.0 / total;
 
-        pdf.orgHeader("Eritrean Muslims Council of Columbus (EMCC)");
+        pdf.orgHeader("Eritrean Muslims Community of Columbus (EMCC)");
         pdf.title("Financial Report — " + periodLabel(period, year, mIdx, qIdx));
         pdf.generatedOn();
         pdf.spacer(6);

@@ -31,7 +31,13 @@ public class ReportsPage {
         messageUpdater.accept("Reports",
                 "Generate collection reports, member statements, board summaries, and asset inventory — each exportable to CSV or PDF.");
 
-        return tabs;
+        javafx.scene.control.Label header = new javafx.scene.control.Label("Reports");
+        header.getStyleClass().add("section-title");
+        javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(16,
+                com.emcc.admin.app.util.Branding.pageHeader(header), tabs);
+        javafx.scene.layout.VBox.setVgrow(tabs, javafx.scene.layout.Priority.ALWAYS);
+        root.setPadding(new javafx.geometry.Insets(18));
+        return root;
     }
 
     private static Tab tab(String title, Node content) {

@@ -8,13 +8,11 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Polygon;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -123,50 +121,21 @@ public class DashboardPage {
     }
 
     public static Node createLogo() {
-        Circle background = new Circle(50, Color.web("#144d29"));
-        background.setStroke(Color.web("#f4c13d"));
-        background.setStrokeWidth(4);
-
-        Circle moon = new Circle(18, Color.web("#f4c13d"));
-        moon.setTranslateX(-12);
-        moon.setTranslateY(-6);
-
-        Circle crescentCut = new Circle(14, Color.web("#144d29"));
-        crescentCut.setTranslateX(-8);
-        crescentCut.setTranslateY(-6);
-
-        Polygon star = new Polygon(
-                0.0, -10.0,
-                3.4, -3.4,
-                12.0, -3.4,
-                5.4, 2.0,
-                7.5, 8.2,
-                0.0, 4.3,
-                -7.5, 8.2,
-                -5.4, 2.0,
-                -12.0, -3.4,
-                -3.4, -3.4
-        );
-        star.setFill(Color.WHITE);
-        star.setTranslateX(10);
-        star.setTranslateY(-8);
-
-        StackPane icon = new StackPane(background, moon, crescentCut, star);
-        icon.setPrefSize(120, 120);
-        icon.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 12, 0, 0, 4);");
+        ImageView icon = com.emcc.admin.app.util.Branding.emblem(120);
+        icon.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 10, 0, 0, 3);");
 
         Label logomark = new Label("EMCC");
         logomark.setTextFill(Color.web("#144d29"));
         logomark.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-letter-spacing: 0.2em;");
 
-        Label organizationName = new Label("Eritrean Muslims Council of Columbus, Ohio");
+        Label organizationName = new Label("Eritrean Muslims Community of Columbus, Ohio");
         organizationName.setTextFill(Color.web("#47525e"));
         organizationName.setStyle("-fx-font-size: 10px; -fx-text-alignment: center; -fx-wrap-text: true;");
         organizationName.setMaxWidth(160);
 
         VBox logoBox = new VBox(8, icon, logomark, organizationName);
         logoBox.setPadding(new Insets(12));
-        logoBox.setStyle("-fx-alignment: center; -fx-background-color: rgba(31, 122, 77, 0.12); -fx-background-radius: 18; -fx-border-color: rgba(31, 122, 77, 0.24); -fx-border-radius: 18;");
+        logoBox.setStyle("-fx-alignment: center; -fx-background-color: white; -fx-background-radius: 18; -fx-border-color: rgba(31, 122, 77, 0.24); -fx-border-radius: 18;");
         return logoBox;
     }
 

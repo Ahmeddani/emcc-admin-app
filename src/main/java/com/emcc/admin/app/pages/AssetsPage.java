@@ -112,7 +112,7 @@ public class AssetsPage {
             }
         });
 
-        root.getChildren().addAll(header, actionRow, assetsTable);
+        root.getChildren().addAll(com.emcc.admin.app.util.Branding.pageHeader(header), actionRow, assetsTable);
         return root;
     }
 

@@ -7,9 +7,10 @@ import com.emcc.admin.app.pages.LoginPage;
 import com.emcc.admin.app.pages.MembersPage;
 import com.emcc.admin.app.pages.PaymentsPage;
 import com.emcc.admin.app.pages.ReportsPage;
+import com.emcc.admin.app.service.BackendLauncher;
 import javafx.animation.FadeTransition;
-import javafx.animation.PauseTransition;
 import javafx.application.Application;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -22,6 +23,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -35,20 +37,58 @@ public class MainApp extends Application {
     private Label detailTitleLabel;
     private Label detailTextLabel;
     private VBox detailContent;
+    private final BackendLauncher backendLauncher = new BackendLauncher();
 
     @Override
     public void start(Stage stage) {
         primaryStage = stage;
-        Scene splashScene = new Scene(createSplashPane(), 520, 420);
+        applyAppIcon(stage);
+
+        Label statusLabel = new Label("Starting…");
+        statusLabel.getStyleClass().add("detail-message");
+        VBox splashRoot = new VBox(16, createSplashPane(), statusLabel);
+        splashRoot.setAlignment(Pos.CENTER);
+        splashRoot.getStyleClass().add("splash-pane");
+
+        Scene splashScene = new Scene(splashRoot, 520, 420);
         splashScene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
 
         stage.setTitle("EMCC Admin App");
         stage.setScene(splashScene);
+        stage.setOnCloseRequest(e -> backendLauncher.stop());
         stage.show();
 
-        PauseTransition splashDelay = new PauseTransition(Duration.seconds(1.8));
-        splashDelay.setOnFinished(event -> showLoginScene(stage));
-        splashDelay.play();
+        Task<Boolean> startup = new Task<>() {
+            @Override protected Boolean call() {
+                updateMessage("Starting backend…");
+                try {
+                    backendLauncher.start();
+                } catch (Exception ex) {
+                    updateMessage("Failed to start backend: " + ex.getMessage());
+                    return false;
+                }
+                updateMessage("Waiting for backend to be ready…");
+                return backendLauncher.awaitReady(30);
+            }
+        };
+        statusLabel.textProperty().bind(startup.messageProperty());
+        startup.setOnSucceeded(e -> {
+            statusLabel.textProperty().unbind();
+            if (Boolean.TRUE.equals(startup.getValue())) {
+                showLoginScene(stage);
+            } else {
+                statusLabel.setText("Backend did not start in time. Check backend.log next to the app, then restart.");
+            }
+        });
+        startup.setOnFailed(e -> {
+            statusLabel.textProperty().unbind();
+            Throwable ex = startup.getException();
+            statusLabel.setText("Startup error: " + (ex != null ? ex.getMessage() : "unknown"));
+        });
+
+        Thread startupThread = new Thread(startup, "backend-startup");
+        startupThread.setDaemon(true);
+        startupThread.start();
     }
 
     private void showLoginScene(Stage stage) {
@@ -114,9 +154,7 @@ public class MainApp extends Application {
 
     private StackPane createSplashPane() {
         Node splashLogo = DashboardPage.createLogo();
-        StackPane splashPane = new StackPane(splashLogo);
-        splashPane.getStyleClass().add("splash-pane");
-        return splashPane;
+        return new StackPane(splashLogo);
     }
 
     private VBox createSidebar() {
@@ -138,7 +176,11 @@ public class MainApp extends Application {
         paymentsButton.setOnAction(event -> navigateTo("Manage Payments"));
         reportsButton.setOnAction(event -> navigateTo("Reports"));
 
-        VBox sidebar = new VBox(12, dashboardButton, membersButton, assetsButton, paymentsButton, reportsButton);
+        javafx.scene.image.ImageView sidebarEmblem = com.emcc.admin.app.util.Branding.emblem(72);
+        StackPane sidebarBrand = new StackPane(sidebarEmblem);
+        sidebarBrand.setPadding(new Insets(4, 0, 12, 0));
+
+        VBox sidebar = new VBox(12, sidebarBrand, dashboardButton, membersButton, assetsButton, paymentsButton, reportsButton);
         sidebar.setPadding(new Insets(18));
         sidebar.getStyleClass().add("sidebar");
         return sidebar;
@@ -197,5 +239,26 @@ public class MainApp extends Application {
 
     public static void main(String[] args) {
         launch();
+    }
+
+    /**
+     * Window icon (Windows title bar / taskbar) and, when run from source, the macOS Dock
+     * icon. The packaged app gets its icon from scripts/icons/emcc-icon.icns / .ico.
+     */
+    private static void applyAppIcon(Stage stage) {
+        try (var in = MainApp.class.getResourceAsStream("/emcc-app-icon.png")) {
+            if (in == null) return;
+            stage.getIcons().add(new Image(in));
+        } catch (Exception ignored) {
+        }
+        try {
+            if (java.awt.Taskbar.isTaskbarSupported()
+                    && java.awt.Taskbar.getTaskbar().isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                java.awt.Taskbar.getTaskbar().setIconImage(
+                        javax.imageio.ImageIO.read(MainApp.class.getResource("/emcc-app-icon.png")));
+            }
+        } catch (Throwable ignored) {
+            // No AWT available — the packaged app still has its bundled icon.
+        }
     }
 }

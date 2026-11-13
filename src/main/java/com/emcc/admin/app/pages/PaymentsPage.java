@@ -346,7 +346,7 @@ public class PaymentsPage {
 
         updateFilteredPayments(allPayments, filteredPayments, initialYear, "All", summaryTable, summaryLabel);
 
-        root.getChildren().addAll(header, bankBar, summaryLabel, filterRow, summaryTable, recommendation, actionRow, paymentsTable, unmatchedPanel);
+        root.getChildren().addAll(com.emcc.admin.app.util.Branding.pageHeader(header), bankBar, summaryLabel, filterRow, summaryTable, recommendation, actionRow, paymentsTable, unmatchedPanel);
         return root;
     }
 

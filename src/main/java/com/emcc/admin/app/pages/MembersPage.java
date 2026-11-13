@@ -165,7 +165,7 @@ public class MembersPage {
             }
         });
 
-        root.getChildren().addAll(header, actionRow, membersTable);
+        root.getChildren().addAll(com.emcc.admin.app.util.Branding.pageHeader(header), actionRow, membersTable);
         return root;
     }
 

@@ -1,0 +1,72 @@
+name: Package Desktop App
+
+# Builds the EMCC Admin desktop installer for both macOS (.dmg) and Windows
+# (.msi) using scripts/package-mac.sh and scripts/package-windows.ps1.
+# jpackage doesn't cross-compile, so this needs one real macOS runner and one
+# real Windows runner — that's what the matrix below is for.
+#
+# One-time setup this workflow depends on:
+#   - emcc-admin-backend is a separate (private) repo, so checking it out here
+#     needs a personal access token with read access to it. Create one at
+#     github.com/settings/tokens (classic, scope: repo — or a fine-grained
+#     token scoped to just emcc-admin-backend), then add it as a repository
+#     secret named BACKEND_REPO_TOKEN in this repo's Settings > Secrets and
+#     variables > Actions. The default GITHUB_TOKEN only has access to the
+#     repo the workflow runs in, so it can't check out a sibling repo on its
+#     own even when both are owned by the same account.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout emcc-admin-app
+        uses: actions/checkout@v4
+        with:
+          path: emcc-admin-app
+
+      - name: Checkout emcc-admin-backend
+        uses: actions/checkout@v4
+        with:
+          repository: Ahmeddani/emcc-admin-backend
+          path: emcc-admin-backend
+          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install WiX Toolset
+        if: runner.os == 'Windows'
+        run: choco install wixtoolset -y
+
+      - name: Build macOS installer
+        if: runner.os == 'macOS'
+        working-directory: emcc-admin-app
+        run: bash scripts/package-mac.sh
+
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        working-directory: emcc-admin-app
+        shell: pwsh
+        run: .\scripts\package-windows.ps1
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: emcc-admin-${{ matrix.os }}
+          path: |
+            emcc-admin-app/dist/*.dmg
+            emcc-admin-app/dist/*.msi
+          if-no-files-found: error

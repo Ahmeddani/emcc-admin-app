@@ -84,7 +84,7 @@ public class AssetInventoryTab {
         exportPdfBtn.getStyleClass().add("action-button");
         exportPdfBtn.setOnAction(e -> ReportExporter.exportPdf(root.getScene().getWindow(),
                 "EMCC_Asset_Inventory.pdf", pdf -> {
-                    pdf.orgHeader("Eritrean Muslims Council of Columbus (EMCC)");
+                    pdf.orgHeader("Eritrean Muslims Community of Columbus (EMCC)");
                     pdf.title("Asset Inventory Report");
                     pdf.generatedOn();
                     pdf.spacer(6);
@@ -115,7 +115,7 @@ public class AssetInventoryTab {
 
     private static String buildCsv() {
         CsvWriter csv = new CsvWriter();
-        csv.raw("Eritrean Muslims Council of Columbus (EMCC)");
+        csv.raw("Eritrean Muslims Community of Columbus (EMCC)");
         csv.raw("Asset Inventory Report");
         csv.line("Generated", LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy")));
         csv.blank();
