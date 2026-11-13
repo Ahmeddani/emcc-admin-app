@@ -63,7 +63,7 @@ jobs:
         run: .\scripts\package-windows.ps1
 
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: emcc-admin-${{ matrix.os }}
           path: |
