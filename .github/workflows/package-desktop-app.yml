@@ -30,12 +30,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout emcc-admin-app
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: emcc-admin-app
 
       - name: Checkout emcc-admin-backend
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Ahmeddani/emcc-admin-backend
           path: emcc-admin-backend
