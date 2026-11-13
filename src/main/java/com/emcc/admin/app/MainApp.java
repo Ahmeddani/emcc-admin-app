@@ -23,6 +23,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -41,6 +42,7 @@ public class MainApp extends Application {
     @Override
     public void start(Stage stage) {
         primaryStage = stage;
+        applyAppIcon(stage);
 
         Label statusLabel = new Label("Starting…");
         statusLabel.getStyleClass().add("detail-message");
@@ -174,7 +176,11 @@ public class MainApp extends Application {
         paymentsButton.setOnAction(event -> navigateTo("Manage Payments"));
         reportsButton.setOnAction(event -> navigateTo("Reports"));
 
-        VBox sidebar = new VBox(12, dashboardButton, membersButton, assetsButton, paymentsButton, reportsButton);
+        javafx.scene.image.ImageView sidebarEmblem = com.emcc.admin.app.util.Branding.emblem(72);
+        StackPane sidebarBrand = new StackPane(sidebarEmblem);
+        sidebarBrand.setPadding(new Insets(4, 0, 12, 0));
+
+        VBox sidebar = new VBox(12, sidebarBrand, dashboardButton, membersButton, assetsButton, paymentsButton, reportsButton);
         sidebar.setPadding(new Insets(18));
         sidebar.getStyleClass().add("sidebar");
         return sidebar;
@@ -233,5 +239,26 @@ public class MainApp extends Application {
 
     public static void main(String[] args) {
         launch();
+    }
+
+    /**
+     * Window icon (Windows title bar / taskbar) and, when run from source, the macOS Dock
+     * icon. The packaged app gets its icon from scripts/icons/emcc-icon.icns / .ico.
+     */
+    private static void applyAppIcon(Stage stage) {
+        try (var in = MainApp.class.getResourceAsStream("/emcc-app-icon.png")) {
+            if (in == null) return;
+            stage.getIcons().add(new Image(in));
+        } catch (Exception ignored) {
+        }
+        try {
+            if (java.awt.Taskbar.isTaskbarSupported()
+                    && java.awt.Taskbar.getTaskbar().isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+                java.awt.Taskbar.getTaskbar().setIconImage(
+                        javax.imageio.ImageIO.read(MainApp.class.getResource("/emcc-app-icon.png")));
+            }
+        } catch (Throwable ignored) {
+            // No AWT available — the packaged app still has its bundled icon.
+        }
     }
 }

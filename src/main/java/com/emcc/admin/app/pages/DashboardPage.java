@@ -8,7 +8,6 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -122,14 +121,7 @@ public class DashboardPage {
     }
 
     public static Node createLogo() {
-        Image logoImage = new Image(
-                DashboardPage.class.getResourceAsStream("/emcc-icon-mark.png"),
-                120, 120, true, true);
-        ImageView icon = new ImageView(logoImage);
-        icon.setFitWidth(120);
-        icon.setFitHeight(120);
-        icon.setPreserveRatio(true);
-        icon.setSmooth(true);
+        ImageView icon = com.emcc.admin.app.util.Branding.emblem(120);
         icon.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 10, 0, 0, 3);");
 
         Label logomark = new Label("EMCC");

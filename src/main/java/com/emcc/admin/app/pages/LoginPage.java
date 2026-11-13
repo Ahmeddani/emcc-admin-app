@@ -27,7 +27,7 @@ public class LoginPage {
         Label subtitleLabel = new Label("Admin Portal");
         subtitleLabel.getStyleClass().add("login-subtitle");
 
-        VBox branding = new VBox(4, logoLabel, subtitleLabel);
+        VBox branding = new VBox(4, com.emcc.admin.app.util.Branding.emblem(96), logoLabel, subtitleLabel);
         branding.setAlignment(Pos.CENTER);
 
         Label emailLabel = new Label("Email Address");
@@ -53,6 +53,95 @@ public class LoginPage {
 
         VBox fields = new VBox(6, emailLabel, emailField, passwordLabel, passwordField, errorLabel);
         VBox card = new VBox(28);
+        String[] enteredPassword = {""};
+
+        // ── Step 3: replace an assigned password (first login) ────────────────
+        Runnable showChangePasswordStep = () -> {
+            Label info = new Label("Welcome! For security, choose your own password before continuing. "
+                    + "Use at least 12 characters with letters and numbers or symbols.");
+            info.setWrapText(true);
+            info.getStyleClass().add("login-field-label");
+
+            Label newLabel = new Label("New password");
+            newLabel.getStyleClass().add("login-field-label");
+            PasswordField newField = new PasswordField();
+            newField.getStyleClass().add("login-field");
+
+            Label confirmLabel = new Label("Confirm new password");
+            confirmLabel.getStyleClass().add("login-field-label");
+            PasswordField confirmField = new PasswordField();
+            confirmField.getStyleClass().add("login-field");
+
+            Label changeError = new Label();
+            changeError.getStyleClass().add("login-error");
+            changeError.setWrapText(true);
+            changeError.setVisible(false);
+            changeError.setManaged(false);
+
+            Button saveButton = new Button("Set Password");
+            saveButton.setMaxWidth(Double.MAX_VALUE);
+            saveButton.getStyleClass().add("login-button");
+
+            Consumer<String> showChangeError = msg -> {
+                changeError.setText(msg);
+                changeError.setVisible(true);
+                changeError.setManaged(true);
+            };
+
+            Runnable attemptChange = () -> {
+                String next = newField.getText();
+                if (next.length() < 12) {
+                    showChangeError.accept("Password must be at least 12 characters.");
+                    return;
+                }
+                if (!next.equals(confirmField.getText())) {
+                    showChangeError.accept("The two passwords don't match.");
+                    return;
+                }
+                saveButton.setDisable(true);
+                saveButton.setText("Saving…");
+                changeError.setVisible(false);
+                changeError.setManaged(false);
+
+                Task<Void> changeTask = new Task<>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        ApiClient.changePassword(enteredPassword[0], next);
+                        return null;
+                    }
+                };
+                changeTask.setOnSucceeded(ev -> {
+                    enteredPassword[0] = "";
+                    onLoginSuccess.accept(emailField.getText().trim(), ApiClient.getAdminName());
+                });
+                changeTask.setOnFailed(ev -> {
+                    saveButton.setDisable(false);
+                    saveButton.setText("Set Password");
+                    Throwable ex = changeTask.getException();
+                    showChangeError.accept(ex instanceof IllegalArgumentException
+                            ? ex.getMessage() : "Could not change the password. Please try again.");
+                });
+                runInBackground(changeTask, "change-password-thread");
+            };
+
+            saveButton.setOnAction(e -> attemptChange.run());
+            confirmField.setOnAction(e -> attemptChange.run());
+            newField.setOnAction(e -> confirmField.requestFocus());
+
+            VBox changeFields = new VBox(6, info, newLabel, newField, confirmLabel, confirmField, changeError);
+            card.getChildren().setAll(branding, changeFields, saveButton);
+            newField.requestFocus();
+        };
+
+        // Signed in: continue to the app, or first replace an assigned password
+        Runnable finishLogin = () -> {
+            if (ApiClient.mustChangePassword()) {
+                showChangePasswordStep.run();
+            } else {
+                enteredPassword[0] = "";
+                onLoginSuccess.accept(emailField.getText().trim(), ApiClient.getAdminName());
+            }
+        };
         Runnable showPasswordStep = () -> {
             card.getChildren().setAll(branding, fields, loginButton);
             passwordField.requestFocus();
@@ -112,7 +201,7 @@ public class LoginPage {
                         return null;
                     }
                 };
-                verifyTask.setOnSucceeded(ev -> onLoginSuccess.accept(emailField.getText().trim(), ApiClient.getAdminName()));
+                verifyTask.setOnSucceeded(ev -> finishLogin.run());
                 verifyTask.setOnFailed(ev -> {
                     verifyButton.setDisable(false);
                     verifyButton.setText("Verify");
@@ -168,6 +257,7 @@ public class LoginPage {
         Runnable attemptLogin = () -> {
             String email = emailField.getText().trim();
             String password = passwordField.getText();
+            enteredPassword[0] = password;
             if (email.isEmpty() || password.isEmpty()) {
                 errorLabel.setText("Please enter your email and password.");
                 errorLabel.setVisible(true);
@@ -192,7 +282,7 @@ public class LoginPage {
                 loginButton.setText("Sign In");
                 ApiClient.LoginChallenge challenge = loginTask.getValue();
                 if (challenge == null) {
-                    onLoginSuccess.accept(email, ApiClient.getAdminName());
+                    finishLogin.run();
                 } else {
                     passwordField.clear();
                     showCodeStep.accept(challenge);

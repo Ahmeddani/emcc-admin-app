@@ -29,6 +29,12 @@ public class ApiClient {
 
     private static String authToken;
     private static String adminName;
+    private static boolean mustChangePassword;
+
+    /** True after login when the admin is still using an assigned password. */
+    public static boolean mustChangePassword() {
+        return mustChangePassword;
+    }
 
     public static String getAdminName() {
         return adminName;
@@ -103,6 +109,26 @@ public class ApiClient {
     private static void storeSession(JsonNode json) {
         authToken = json.get("token").asText();
         adminName = json.path("adminName").asText("Admin");
+        mustChangePassword = json.path("mustChangePassword").asBoolean(false);
+    }
+
+    /** Replaces the signed-in admin's password. Throws IllegalArgumentException with the server's reason. */
+    public static void changePassword(String currentPassword, String newPassword) throws Exception {
+        ObjectNode body = MAPPER.createObjectNode();
+        body.put("currentPassword", currentPassword);
+        body.put("newPassword", newPassword);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/auth/change-password"))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + authToken)
+                .timeout(Duration.ofSeconds(30))
+                .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(body)))
+                .build();
+        HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalArgumentException(errorMessage(response, "Could not change the password."));
+        }
+        mustChangePassword = false;
     }
 
     private static String errorMessage(HttpResponse<String> response, String fallback) {
