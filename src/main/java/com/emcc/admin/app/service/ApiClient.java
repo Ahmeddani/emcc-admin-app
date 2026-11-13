@@ -21,7 +21,7 @@ public class ApiClient {
 
     // Port 8080 is used by another project (comeme-backend) on this machine, so
     // emcc-admin-backend runs on 8081 instead (see run.sh). Keep these in sync.
-    private static final String BASE_URL = "http://localhost:8081/api";
+    private static final String BASE_URL = "http://127.0.0.1:8081/api";
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -294,7 +294,8 @@ public class ApiClient {
     private static JsonNode send(HttpRequest request) throws Exception {
         HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() >= 400) {
-            throw new RuntimeException("Request failed: HTTP " + response.statusCode());
+            // Prefer the server's own message (e.g. rate-limit or validation errors)
+            throw new RuntimeException(errorMessage(response, "Request failed: HTTP " + response.statusCode()));
         }
         return MAPPER.readTree(response.body());
     }
